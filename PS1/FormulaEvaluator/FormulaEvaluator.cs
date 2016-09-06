@@ -1,9 +1,15 @@
-﻿using System;
+﻿//Author: Ian Rodriguez (u1071551)
+//Date: 09/06/2016
+//Purpose: This function is designed to evaluate infix expressions. It allows any combination
+//         of numbers and variables of the form (in Regex) [a-zA-Z]+[0-9]+ and the following
+//         operators: +, -, /, *, ), (. Any and all arithmetic and number format errors are 
+//         handled by throwing a System.ArgumentException.
+
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace FormulaEvaluator
 {
@@ -31,7 +37,7 @@ namespace FormulaEvaluator
         /// Delegate used to lookup the values of variables in expressions using the passed in method.
         /// </summary>
         /// <param name="value"></param>
-        /// <returns></returns>
+        /// <returns>The looked up value for the passed in variable.</returns>
         public delegate int Lookup(string value);
 
         /// <summary>
@@ -40,6 +46,8 @@ namespace FormulaEvaluator
         private static void add()
         {
             operators.Pop();
+            if (operands.Count < 2)
+                throw new ArgumentException("Cannot execute expression - not enough operands to execute addition.");
             int opResult = int.Parse(operands.Pop()) + int.Parse(operands.Pop());
             operands.Push(opResult.ToString());
         }
@@ -66,6 +74,9 @@ namespace FormulaEvaluator
         /// <returns>Returns the result of evaluating the expression as an integer.</returns>
         public static int Evaluate(string exp, Lookup variableEvaluator)
         {
+            operands.Clear();
+            operators.Clear();
+
             string exp_nowhitespace = Regex.Replace(exp, @"\s+", "");
             string[] tokens = Regex.Split(exp_nowhitespace, "(\\()|(\\))|(-)|(\\+)|(\\*)|(/)");
 
@@ -77,11 +88,15 @@ namespace FormulaEvaluator
                 int numberToken;
                 if (!allowedOperators.Contains(token))
                 {
+                    if (!Regex.Match(exp, @"^[a-zA-Z]+[0-9]+").Success && !int.TryParse(token, out numberToken))
+                        throw new ArgumentException("Cannot execute expression - an illegal operator is present.");
+
                     if (!(int.TryParse(token, out numberToken)))
                         numberToken = variableEvaluator(token);
+
                     if (operators.Count == 0)
                     {
-                        operands.Push(token);
+                        operands.Push(numberToken.ToString());
                         continue;
                     }
                     else
@@ -111,7 +126,7 @@ namespace FormulaEvaluator
                             operands.Push(numberToken.ToString());
                     }
                 }
-                else
+                else if (allowedOperators.Contains(token))
                 {
 
                     if (token.Equals("+") || token.Equals("-"))
@@ -154,6 +169,8 @@ namespace FormulaEvaluator
                         {
                             if (operators.Peek().Equals("*"))
                             {
+                                if (operands.Count < 2)
+                                    throw new ArgumentException("Cannot execute expression - there are not enough operands for multiplication.");
                                 operands.Push((int.Parse(operands.Pop()) * int.Parse(operands.Pop())).ToString());
                                 operators.Pop();
                             }
@@ -170,6 +187,10 @@ namespace FormulaEvaluator
                             }
                         }
                     }
+                }
+                else
+                {
+                    throw new ArgumentException("Cannot execute expression - it contains an illegal operator. Legal operators: +, -, /, *, (, ).");
                 }
             }
             if (operators.Count == 0 && operands.Count == 1)
