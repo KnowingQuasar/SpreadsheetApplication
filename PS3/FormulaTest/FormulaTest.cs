@@ -422,7 +422,7 @@ namespace UnitTestProject1
             }
             catch (FormulaFormatException f)
             {
-                Assert.AreEqual("Cannot execute expression - not enough operands to execute addition.", f.Message);
+                Assert.AreEqual("Cannot execute expression - not enough operands to execute addition. Please verify your expression's addition.", f.Message);
             }
 
             //Clear the stacks
