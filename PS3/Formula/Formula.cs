@@ -40,7 +40,7 @@ namespace SpreadsheetUtilities
         private int hashCode;
         private string[] allowedOperators = { "*", "/", "+", "-", "(", ")" };
 
-        private string tokenValidator(string token)
+        private string TokenValidator(string token)
         {
             double outToken;
             if (allowedOperators.Contains(token))
@@ -55,7 +55,7 @@ namespace SpreadsheetUtilities
         /// <summary>
         /// This method is used to add operands together and remove them and the associated operator from the stack.
         /// </summary>
-        private static void add(Stack<string> operators, Stack<string> operands)
+        private void Add(Stack<string> operators, Stack<string> operands)
         {
             operators.Pop();
             if (operands.Count < 2)
@@ -67,7 +67,7 @@ namespace SpreadsheetUtilities
         /// <summary>
         /// This method is uesd to subtract one operand from another and remove them and the associated operator from the stack.
         /// </summary>
-        private static void subtract(Stack<string> operators, Stack<string> operands)
+        private void Subtract(Stack<string> operators, Stack<string> operands)
         {
             operators.Pop();
             double op1;
@@ -122,18 +122,19 @@ namespace SpreadsheetUtilities
             for (int i = 0; i < tokens.Count; i++)
             {
                 string token = tokens.ToArray()[i];
-                string tokenType = tokenValidator(token);
+                string tokenType = TokenValidator(token);
                 if ((i + 1) == tokens.Count)
                 {
                     if (!token.Equals(")") && !tokenType.Equals("Num/Var"))
                         throw new FormulaFormatException("The given expression does not end in a number, variable, or closing paranthesis. Please validate that the given expression is correct and ends in a number, variable, or closing paranthesis.");
-                    if (token.Equals(")"))
-                        closingParanthesisCount++;
-                    parsedFormula.Add(token);
-                    continue;
                 }
-                string nextToken = tokens.ToArray()[i + 1];
-                string nextTokenType = tokenValidator(nextToken);
+                string nextToken = "";
+                string nextTokenType = "";
+                if (!((i + 1) == tokens.Count))
+                {
+                    nextToken = tokens.ToArray()[i + 1];
+                    nextTokenType = TokenValidator(nextToken);
+                }
                 if (i == 0)
                     if (!tokenType.Equals("Num/Var") && !token.Equals("("))
                         throw new FormulaFormatException("The first token in the expression was not a number or variable");
@@ -175,7 +176,7 @@ namespace SpreadsheetUtilities
                     {
                         token = double.Parse(token).ToString();
                     }
-                    if (!nextToken.Equals(")") && !nextTokenType.Equals("Op"))
+                    if (!nextToken.Equals(")") && !nextTokenType.Equals("Op") && (!((i + 1) == tokens.Count)))
                         throw new FormulaFormatException("The number \"" + token + "\" is not followed by a number or variable, but \"" + nextToken + "\". Please make sure that the given number is followed by a valid operator or closing parantheis.");
                 }
                 parsedFormula.Add(token);
@@ -272,9 +273,9 @@ namespace SpreadsheetUtilities
                                 if (operands.Count < 2)
                                     return new FormulaError("Cannot execute expression - not enough arguments for the specified operators.");
                                 if (operators.Peek().Equals("+"))
-                                    add(operators, operands);
+                                    Add(operators, operands);
                                 else if (operators.Peek().Equals("-"))
-                                    subtract(operators, operands);
+                                    Subtract(operators, operands);
                             }
                             operators.Push(token);
                         }
@@ -286,9 +287,9 @@ namespace SpreadsheetUtilities
                         if (operators.Count == 0)
                             return new FormulaError("Cannot execute expression - there is a \")\" without a matching \"(\".");
                         else if (operators.Peek().Equals("+"))
-                            add(operators, operands);
+                            Add(operators, operands);
                         else if (operators.Peek().Equals("-"))
-                            subtract(operators, operands);
+                            Subtract(operators, operands);
 
                         if (operators.Count == 0)
                             return new FormulaError("Cannot execute expression - there is a \")\" without a matching \"(\".");
@@ -334,9 +335,9 @@ namespace SpreadsheetUtilities
                 if (!(operators.Count == 1) || !(operands.Count == 2))
                     return new FormulaError("Cannot execute expression - the last operation does not have the needed amount of operands or operators.");
                 else if (operators.Peek().Equals("+"))
-                    add(operators, operands);
+                    Add(operators, operands);
                 else if (operators.Peek().Equals("-"))
-                    subtract(operators, operands);
+                    Subtract(operators, operands);
                 return double.Parse(operands.Pop());
             }
         }
