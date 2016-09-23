@@ -7,95 +7,34 @@ namespace UnitTestProject1
     [TestClass]
     public class FormulaTest
     {
-        string[] invalidExpressions =
-            {
-                " ", //#1
-                " & ", //#2
-                " A ", //
-                " * 2", //#3
-                "1 / 0", //#4
-                "B4 / 4", //#5
-                " + + 2", //#6
-                " - - 2", //#7
-                "( + )", //#8
-                " 2 + 3)", //#9
-                " * (2 + 3)", //#10
-                "1 / (2 - 2)", //#11
-                "3 * ", //#12
-                "3 + + 2" //#13
-            };
-
-        string[] testExpressions = 
+        private string normalizer(string token)
         {
-                //  "expression", //expected value
-                "2", // 2                                   #1
-                "2 + 3", // 5                               #2
-                "3 - 2", // 1                               #3
-                "2 * 3", // 6                               #4
-                "4 / 2", // 2                               #5
-                "1 + 2 + 3", // 6                           #6
-                "2 + 3 - 1", // 4                           #7
-                "2 + 3 * 2", // 8                           #8
-                "2 + 3 / 3", // 3                           #9
-                "3 - 2 - 1", // 0                           #10
-                "3 - 2 + 1", // 2                           #11
-                "3 - 1 * 2", // 1                           #12
-                "3 - 2 / 1", // 1                           #13
-                "3 * 2 + 1", // 7                           #14
-                "3 * 2 - 1", // 5                           #15
-                "3 * 2 * 2", // 12                          #16
-                "3 * 2 / 2", // 3                           #17
-                "4 / 2 + 1", // 3                           #18
-                "4 / 2 - 1", // 1                           #19
-                "4 / 2 * 2", // 4                           #20
-                "4 / 2 / 2", // 1                           #21
-                "(2 + 3)", // 5                             #22
-                "(3 - 2)", // 1                             #23
-                "(2 * 3)", // 6                             #24
-                "(4 / 2)", // 2                             #25
-                "(1 + 2 + 3)", // 6                         #26
-                "(1 + 2 - 3)", // 0                         #27
-                "(1 + 2 * 3)", // 7                         #28
-                "(1 + 2 / 2)", // 2                         #29
-                "(1 - 2 + 3)", // 2                         #30
-                "(3 - 2 - 1)", // 0                         #31
-                "(3 - 2 * 1)", // 1                         #32
-                "(3 - 2 / 2)", // 2                         #33
-                "1 + (2 + 3)", // 6                         #34
-                "10 - (2 + 3)", // 5                        #35
-                "2 * (2 + 3)", // 10                        #36
-                "10 / (2 + 3)", // 2                        #37
-                "(10 + 2) + (10 + 1)", // 23                #38
-                "(10 + 2) - (1 + 4)", // 7                  #39
-                "(10 + 2) * (1 + 1)", // 24                 #40
-                "(10 + 2) / (1 + 1)", // 6                  #41
-                "(10 + (10 + 2))", // 22                    #42
-                "(10 - (10 + 2))", // -2                    #43
-                "(10 * (1 + 1))", // 20                     #44
-                "(10 / (1 + 1))", // 5                      #45
-                "(10 + (1 + 1)) + (10 + (1 + 1))", // 24    #46
-                "(20 + (2 + 2)) - (10 + (1 + 1))", // 12    #47
-                "(20 + (1 + 2)) * (1 + (1 + 0))", // 46     #48
-                "(20 + (1 + 1)) / (9 + (1 + 1))", // 2      #49
-                "A3 + 2", // 4                              #50
-
-                //Super complex example:
-                "(20 / (1 * (2 / 1))) / (1 + (2 * 2 / 1)) / 2 * 17 + (42 - 31) * 2 / 2" // 28  #51
-            };
+            return token.ToUpper();
+        }
         [TestMethod]
         public void DefaultConstructorTest()
         {
-            Formula[] bigTest = new Formula[51];
-            for (int i = 0; i < 51; i++)
-            {
-                bigTest[i] = new Formula(testExpressions[i]);
-            }
-            for (int i = 0; i < 51; i++)
-            {
-                bigTest[i].Evaluate(null);
-            }
-            Formula underscoreTest = new Formula("x_3 + 4 * x_3_4y");
-            string test = "test";
+            Formula addTest = new Formula("2 + 3");
+            Formula subTest = new Formula("2 - 3");
+            Formula multTest = new Formula("2 * 3");
+            Formula divTest = new Formula("2 / 3");
+            Formula paraTest = new Formula("(2 + 3)");
+            Formula varTest = new Formula("A_2 + 2");
+            Formula manyOperations = new Formula("(20 / (1 * (2 / 1))) / (1 + (2 * 2 / 1)) / 2 * 17 + (42 - 31) * 2 / 2");
+
+            Assert.AreEqual("2 + 3", addTest.ToString());
+            Assert.AreEqual("2 - 3", subTest.ToString());
+            Assert.AreEqual("2 * 3", multTest.ToString());
+            Assert.AreEqual("2 / 3", divTest.ToString());
+            Assert.AreEqual("(2 + 3)", paraTest.ToString());
+            Assert.AreEqual("A_2 + 2", varTest.ToString());
+            Assert.AreEqual("(20 / (1 * (2 / 1))) / (1 + (2 * 2 / 1)) / 2 * 17 + (42 - 31) * 2 / 2", manyOperations.ToString());
+        }
+        [TestMethod]
+        public void NormalizerConstructorTest()
+        {
+            Formula normalizerTest = new Formula("2 + 3", normalizer, null);
+
         }
     }
 }

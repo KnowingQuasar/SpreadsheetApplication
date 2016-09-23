@@ -37,16 +37,17 @@ namespace SpreadsheetUtilities
     public class Formula
     {
         private List<string> parsedFormula = new List<string>();
+        private int hashCode;
         private string[] allowedOperators = { "*", "/", "+", "-", "(", ")" };
 
         private string tokenValidator(string token)
         {
-            int outToken;
+            double outToken;
             if (allowedOperators.Contains(token))
                 return "Op";
             else
             {
-                if (Regex.Match(token, @"[a-zA-Z_](?: [a-zA-Z_]|\d)*").Success || int.TryParse(token, out outToken))
+                if (Regex.Match(token, @"[a-zA-Z_](?: [a-zA-Z_]|\d)*").Success || double.TryParse(token, out outToken))
                     return "Num/Var";
             }
             throw new FormulaFormatException("The token \"" + token + "\" is invalid. Please validate the formula contents.");
@@ -59,7 +60,7 @@ namespace SpreadsheetUtilities
             operators.Pop();
             if (operands.Count < 2)
                 throw new ArgumentException("Cannot execute expression - not enough operands to execute addition.");
-            int opResult = int.Parse(operands.Pop()) + int.Parse(operands.Pop());
+            double opResult = double.Parse(operands.Pop()) + double.Parse(operands.Pop());
             operands.Push(opResult.ToString());
         }
 
@@ -69,11 +70,11 @@ namespace SpreadsheetUtilities
         private static void subtract(Stack<string> operators, Stack<string> operands)
         {
             operators.Pop();
-            int op1;
-            int op2;
-            op2 = int.Parse(operands.Pop());
-            op1 = int.Parse(operands.Pop());
-            int opResult = op1 - op2;
+            double op1;
+            double op2;
+            op2 = double.Parse(operands.Pop());
+            op1 = double.Parse(operands.Pop());
+            double opResult = op1 - op2;
             operands.Push(opResult.ToString());
         }
         /// <summary>
@@ -150,8 +151,30 @@ namespace SpreadsheetUtilities
                 }
                 else if (tokenType.Equals("Num/Var"))
                 {
-                    if (!isValid(normalize(token)))
-                        throw new FormulaFormatException("The validator failed ");
+                    double outToken;
+                    if (!double.TryParse(token, out outToken))
+                    {
+                        if (isValid != null)
+                        {
+                            if (normalize != null)
+                            {
+                                if (!isValid(normalize(token)))
+                                    throw new FormulaFormatException("The validator failed to validate this token: \"" + token + "\". Please make sure that the validate function allows this variable.");
+                                token = normalize(token);
+                            }
+                            else
+                            {
+                                if (!isValid(token))
+                                    throw new FormulaFormatException("The validator failed to validate this token: \"" + token + "\". Please make sure that the validate function allows this variable.");
+                            }
+                        }
+                        else if (normalize != null)
+                            token = normalize(token);
+                    }
+                    else
+                    {
+                        token = double.Parse(token).ToString();
+                    }
                     if (!nextToken.Equals(")") && !nextTokenType.Equals("Op"))
                         throw new FormulaFormatException("The number \"" + token + "\" is not followed by a number or variable, but \"" + nextToken + "\". Please make sure that the given number is followed by a valid operator or closing parantheis.");
                 }
@@ -188,7 +211,7 @@ namespace SpreadsheetUtilities
             Stack<string> operands = new Stack<string>();
             foreach (string token in parsedFormula)
             {
-                double numberToken;
+                double numberToken = -1;
                 if (!allowedOperators.Contains(token))
                 {
                     if (!Regex.Match(token, @"[a-zA-Z_](?: [a-zA-Z_]|\d)*").Success && !double.TryParse(token, out numberToken))
@@ -199,7 +222,7 @@ namespace SpreadsheetUtilities
                         if (lookup == null)
                             return new FormulaError("Cannot evaluate expression. The expression contains variables, but no Lookup function is defined! Please define a valid lookup function.");
                         numberToken = lookup(token);
-                        if (numberToken == null)
+                        if (numberToken == -1)
                             return new FormulaError("Cannot evaluate expression. The lookup function does not have a value for the variable \"" + token + "\". Please make sure that the lookup function has a value for the variable.");
                     }
 
@@ -303,7 +326,7 @@ namespace SpreadsheetUtilities
                 }
             }
             if (operators.Count == 0 && operands.Count == 1)
-                return int.Parse(operands.Pop());
+                return double.Parse(operands.Pop());
             else
             {
                 if (operands.Count == 0)
@@ -331,7 +354,9 @@ namespace SpreadsheetUtilities
         /// </summary>
         public IEnumerable<String> GetVariables()
         {
-            return null;
+            foreach (string token in parsedFormula)
+                if (Regex.Match(token, @"[a-zA-Z_](?: [a-zA-Z_]|\d)*").Success)
+                    yield return token;
         }
 
         /// <summary>
@@ -346,7 +371,23 @@ namespace SpreadsheetUtilities
         /// </summary>
         public override string ToString()
         {
-            return null;
+            string retString = "";
+            foreach (string token in parsedFormula)
+            {
+                if (token.Equals("("))
+                {
+                    retString += token;
+                    continue;
+                }
+                else if (token.Equals(")"))
+                {
+                    retString = retString.Remove(retString.Length - 1);
+                    retString += token + " ";
+                    continue;
+                }
+                retString += token + " ";
+            }
+            return retString.Trim();
         }
 
         /// <summary>
@@ -367,6 +408,10 @@ namespace SpreadsheetUtilities
         /// </summary>
         public override bool Equals(object obj)
         {
+            if (obj == null || !(obj is Formula))
+                return false;
+            if (GetHashCode() == obj.GetHashCode())
+                return true;
             return false;
         }
 
@@ -377,7 +422,11 @@ namespace SpreadsheetUtilities
         /// </summary>
         public static bool operator ==(Formula f1, Formula f2)
         {
-            return false;
+            if (f1.Equals(null) && f2.Equals(null))
+                return true;
+            if (f1.Equals(null) && !f2.Equals(null))
+                return false;
+            return (f1.GetHashCode() == f2.GetHashCode());
         }
 
         /// <summary>
@@ -387,7 +436,7 @@ namespace SpreadsheetUtilities
         /// </summary>
         public static bool operator !=(Formula f1, Formula f2)
         {
-            return false;
+            return !(f1 == f2);
         }
 
         /// <summary>
@@ -397,7 +446,7 @@ namespace SpreadsheetUtilities
         /// </summary>
         public override int GetHashCode()
         {
-            return 0;
+            return ToString().GetHashCode();
         }
 
         /// <summary>
