@@ -59,7 +59,7 @@ namespace SpreadsheetUtilities
         {
             operators.Pop();
             if (operands.Count < 2)
-                throw new ArgumentException("Cannot execute expression - not enough operands to execute addition.");
+                throw new FormulaFormatException("Cannot execute expression - not enough operands to execute addition.");
             double opResult = double.Parse(operands.Pop()) + double.Parse(operands.Pop());
             operands.Push(opResult.ToString());
         }
@@ -423,9 +423,9 @@ namespace SpreadsheetUtilities
         /// </summary>
         public static bool operator ==(Formula f1, Formula f2)
         {
-            if (f1.Equals(null) && f2.Equals(null))
+            if (ReferenceEquals(null, f1) && ReferenceEquals(null, f2))
                 return true;
-            if (f1.Equals(null) && !f2.Equals(null))
+            if (ReferenceEquals(null, f1) || ReferenceEquals(null, f2))
                 return false;
             return (f1.GetHashCode() == f2.GetHashCode());
         }
