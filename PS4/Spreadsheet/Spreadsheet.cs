@@ -1,8 +1,9 @@
-﻿using System;
+﻿// Written by Ian Rodriguez
+// Date of Completion: 9/29/2016
+// Purpose: general setup of future spreadsheet design.
+
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using SpreadsheetUtilities;
 using System.Text.RegularExpressions;
 
@@ -121,6 +122,11 @@ namespace SS
                 editCell = new Cell(name, formula);
                 allCells.Add(name, editCell);
                 LinkedList<string> cellsToRecalc = (LinkedList<string>)GetCellsToRecalculate(name);
+
+                //Here I would send these cell names to a function that would recalculate the necessary cells.
+                //However, for this implementation, it seems as if this function is not necessary as we are only setting up
+                //the spreadsheet's structure and basic form. See the note in the README for more details
+
             }
             //Otherwise, edit the current value of the named cell:
             else
@@ -128,9 +134,10 @@ namespace SS
                 allCells.TryGetValue(name, out editCell);
                 editCell.value = formula;
                 LinkedList<string> cellsToRecalc = (LinkedList<string>)GetCellsToRecalculate(name);
+
                 //Here I would send these cell names to a function that would recalculate the necessary cells.
                 //However, for this implementation, it seems as if this function is not necessary as we are only setting up
-                //the spreadsheet's structure and basic form.
+                //the spreadsheet's structure and basic form. See the note in the README for more details
 
             }
             //Return a HashSet of the named cell's dependees and the name given.
