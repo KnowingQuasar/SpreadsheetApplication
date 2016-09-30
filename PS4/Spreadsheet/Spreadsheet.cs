@@ -31,7 +31,10 @@ namespace SS
         /// <param name="name">The name to be validated.</param>
         private void validateName(string name)
         {
+            int parsevar;
             if (name == null)
+                throw new InvalidNameException();
+            if (int.TryParse(name[0].ToString(), out parsevar))
                 throw new InvalidNameException();
             if (!Regex.Match(name, @"[a-zA-Z_](?: [a-zA-Z_]|\d)*").Success)
                 throw new InvalidNameException();
@@ -54,7 +57,7 @@ namespace SS
             //Otherwise get the value of the given name and return it.
             else
             {
-                allCells.TryGetValue("name", out retCell);
+                allCells.TryGetValue(name, out retCell);
                 return retCell.value;
             }
                 
