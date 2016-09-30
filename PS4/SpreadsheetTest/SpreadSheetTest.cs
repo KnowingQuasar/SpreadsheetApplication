@@ -103,7 +103,7 @@ namespace SpreadsheetTest
             //Attempt to set the cell contents:
             ISet<string> result = sheet.SetCellContents("A1", testFormula);
             //Assert that there are no dependants:
-            Assert.AreEqual(0, result.Count);
+            Assert.AreEqual(1, result.Count);
             //Assert that the given cell contents are correct (this also inadvertantly tests GetCellContents() as stated in the summary):
             Assert.AreEqual(testFormula, sheet.GetCellContents("A1"));
         }
@@ -120,7 +120,7 @@ namespace SpreadsheetTest
             //Attempt to set the cell contents:
             ISet<string> result = sheet.SetCellContents("A1", testString);
             //Assert that there are no dependants:
-            Assert.AreEqual(0, result.Count);
+            Assert.AreEqual(1, result.Count);
             //Assert that the given cell contents are correct:
             Assert.AreEqual(testString, sheet.GetCellContents("A1"));
         }
@@ -137,7 +137,7 @@ namespace SpreadsheetTest
             //Attempt to set the cell contents:
             ISet<string> result = sheet.SetCellContents("A1", testDouble);
             //Assert that there are no dependants:
-            Assert.AreEqual(0, result.Count);
+            Assert.AreEqual(1, result.Count);
             //Assert that the given cell contents are correct:
             Assert.AreEqual(testDouble, sheet.GetCellContents("A1"));
         }
@@ -170,7 +170,57 @@ namespace SpreadsheetTest
             sheet.SetCellContents("A1", nullString);
         }
 
+        /// <summary>
+        /// Tests SetCellContents() with a Formula containing multiple dependencies.
+        /// </summary>
+        [TestMethod]
+        public void SetCellContentsWithFormulaHavingDependenciesTest()
+        {
+            Spreadsheet sheet = new Spreadsheet();
+            //Create a Formula with dependencies
+            Formula formulaWithDependencies = new Formula("A2 + 3");
+            //Attempt to set the cell contents:
+            ISet<string> result = sheet.SetCellContents("A1", formulaWithDependencies);
+            //Assert that the resulting values are as expected:
+            Assert.IsTrue(result.Contains("A1"));
+            Assert.IsFalse(result.Contains("A2"));
+        }
 
+        /// <summary>
+        /// Tests SetCellContents() with a Formula containing multiple dependencies referencing each other (i.e. A1 contains 3 * A4 and A2 contains A1 + 3).
+        /// </summary>
+        [TestMethod]
+        public void SetCellContentsWithFormulaHavingDependenciesTest2()
+        {
+            Spreadsheet sheet = new Spreadsheet();
+            //Create one Formula with dependencies
+            Formula formulaWithDependencies1 = new Formula("A2 + 3");
+            //Create another Formula with dependencies
+            Formula formulaWithDependencies2 = new Formula("A1 * 4");
+            //Attempt to set the cell contents of A4:
+            sheet.SetCellContents("A4", formulaWithDependencies2);
+            //Attempt to set the cell contents of A1:
+            ISet<string> result = sheet.SetCellContents("A1", formulaWithDependencies1);
+            Assert.IsTrue(result.Contains("A1"));
+            Assert.IsTrue(result.Contains("A4"));
+        }
 
+        /// <summary>
+        /// Tests SetCellContents() with two Formula that reference each other (cell A1 references A2 and A2 references A1)
+        /// </summary>
+        [TestMethod]
+        [ExpectedException(typeof(CircularException))]
+        public void SetCellContentsWithCircularDependencies()
+        {
+            Spreadsheet sheet = new Spreadsheet();
+            //Create another Formula with dependencies
+            Formula formulaWithDependencies1 = new Formula("A1");
+            //Create one Formula with dependencies
+            Formula formulaWithDependencies2 = new Formula("A2");
+            //Attempt to set the cell contents of A2:
+            sheet.SetCellContents("A2", formulaWithDependencies1);
+            //Attempt to set the cell contents of A1:
+            sheet.SetCellContents("A1", formulaWithDependencies2);
+        }
     }
 }
