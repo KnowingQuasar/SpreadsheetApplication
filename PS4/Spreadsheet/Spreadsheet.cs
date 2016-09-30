@@ -29,15 +29,21 @@ namespace SS
         /// Internal function used broadly to validate that a name is non-null and fits the valid variable criteria.
         /// </summary>
         /// <param name="name">The name to be validated.</param>
-        private void validateName(string name)
+        private void ValidateName(string name)
         {
             int parsevar;
             if (name == null)
+            {
                 throw new InvalidNameException();
+            }
             if (int.TryParse(name[0].ToString(), out parsevar))
+            {
                 throw new InvalidNameException();
+            }
             if (!Regex.Match(name, @"[a-zA-Z_](?: [a-zA-Z_]|\d)*").Success)
+            {
                 throw new InvalidNameException();
+            }
         }
 
         /// <summary>
@@ -48,12 +54,14 @@ namespace SS
         public override object GetCellContents(string name)
         {
             //Assure that the given name is valid
-            validateName(name);
+            ValidateName(name);
             //Create a container cell
             Cell retCell;
             //If the allCells dictionary is empty or doesn't contain the name in question, return an empty string.
             if (allCells.Count == 0 || !allCells.ContainsKey(name))
+            {
                 return "";
+            }
             //Otherwise get the value of the given name and return it.
             else
             {
@@ -79,7 +87,9 @@ namespace SS
                 {
                     //If the value is not an empty string, add it to the return value:
                     if (!checkCell.value.Equals(""))
+                    {
                         yield return checkCell.name;
+                    }
                 }
             }
         }
@@ -94,9 +104,11 @@ namespace SS
         {
             //If the Formula object is null, throw an ArgumentNullException:
             if (formula == null)
+            {
                 throw new ArgumentNullException();
+            }
             //Assure that the given name is valid
-            validateName(name);
+            ValidateName(name);
             //Create container cell
             Cell editCell;
             foreach (string var in formula.GetVariables())
@@ -142,8 +154,10 @@ namespace SS
             //Has the same logic as SetCellContents(string name, Formula formula), but uses a string instead of a Formula object. See the aforementioned method for details.
 
             if (text == null)
+            {
                 throw new ArgumentNullException();
-            validateName(name);
+            }
+            ValidateName(name);
             Cell editCell;
             if (allCells.Count == 0 || !allCells.ContainsKey(name))
             {
@@ -175,7 +189,7 @@ namespace SS
             //Has the same logic as SetCellContents(string name, Formula formula), but uses a string instead of a Formula object. See the aforementioned method for details.
             //NOTE: does not check if the double is null, as the double data type is guaranteed to not be null.
 
-            validateName(name);
+            ValidateName(name);
             Cell editCell;
             if (allCells.Count == 0 || !allCells.ContainsKey(name))
             {
@@ -204,10 +218,14 @@ namespace SS
         protected override IEnumerable<string> GetDirectDependents(string name)
         {
             if (name == null)
+            {
                 throw new ArgumentNullException();
-            validateName(name);
+            }
+            ValidateName(name);
             if (allCells.Count == 0 || !allCells.ContainsKey(name))
-                return null;
+            {
+                return new List<string>();
+            }
             return dg.GetDependents(name);
         }
 
