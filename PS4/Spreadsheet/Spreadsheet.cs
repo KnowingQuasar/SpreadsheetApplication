@@ -6,6 +6,8 @@ using System;
 using System.Collections.Generic;
 using SpreadsheetUtilities;
 using System.Text.RegularExpressions;
+using System.Xml;
+using System.IO;
 
 namespace SS
 {
@@ -15,15 +17,117 @@ namespace SS
         /// Dictionary containing a group of associated names and their cell values.
         /// </summary>
         Dictionary<string, Cell> allCells;
+
         /// <summary>
         /// Dependency graph for the Spreadsheet. See the DependencyGraph documentation for details.
         /// </summary>
         DependencyGraph dg;
 
-        public Spreadsheet()
+        /// <summary>
+        /// 
+        /// </summary>
+        public override bool Changed
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+
+            protected set
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        /// <summary>
+        /// Default constructor that initializes an empty spreadsheet that normalizes to itself and has no validation conditions 
+        /// </summary>
+        public Spreadsheet() : base(null, null, "default")
         {
             allCells = new Dictionary<string, Cell>();
             dg = new DependencyGraph();
+        }
+
+        /// <summary>
+        /// Constructor that initializes an empty spreadsheet and sets validate and normalize functions and a "version"
+        /// </summary>
+        /// <param name="isValid"></param>
+        /// <param name="normalize"></param>
+        /// <param name="version"></param>
+        public Spreadsheet(Func<string, bool> isValid, Func<string, string> normalize, string version) : base(isValid, normalize, version)
+        {
+            allCells = new Dictionary<string, Cell>();
+            dg = new DependencyGraph();
+        }
+
+        /// <summary>
+        /// Constructor that loads a spreadsheet from the specified file path and sets validate and normalize functions and a version string 
+        /// </summary>
+        /// <param name="isValid"></param>
+        /// <param name="normalize"></param>
+        /// <param name="version"></param>
+        /// <param name="filePath"></param>
+        public Spreadsheet(Func<string, bool> isValid, Func<string, string> normalize, string version, string filePath) : base(isValid, normalize, version)
+        {
+            allCells = new Dictionary<string, Cell>();
+            dg = new DependencyGraph();
+            LoadSpreadsheet(filePath);
+        }
+
+
+        private void LoadSpreadsheet(string file)
+        {
+            using (XmlReader reader = XmlReader.Create(file))
+            {
+                reader.ReadToFollowing("spreadsheet");
+                reader.MoveToFirstAttribute();
+                string ver = reader.Value;
+                if (!ver.Equals(Version))
+                {
+                    throw new SpreadsheetReadWriteException("The version of the read spreadsheet does not match the inputted version!");
+                }
+                else
+                {
+                    string name = "";
+                    string undefinedContents = "";
+                    bool isValue = false;
+                    while (reader.Read())
+                    {
+                        switch (reader.NodeType)
+                        {
+                            case XmlNodeType.Element:
+                                name = reader.Name;
+                                break;
+                            case XmlNodeType.Text:
+
+                                undefinedContents = reader.Value;
+                                isValue = true;
+                                break;
+                            case XmlNodeType.EndElement:
+                                break;
+                        }
+                        if (isValue)
+                        {
+                            double doubleContents;
+                            Formula formulaContents;
+
+                            if (double.TryParse(undefinedContents, out doubleContents))
+                            {
+                                SetCellContents(name.ToString(), doubleContents);
+                            }
+                            else if (undefinedContents[0] == '=')
+                            {
+                                formulaContents = new Formula(undefinedContents.Substring(1));
+                                SetCellContents(name.ToString(), formulaContents);
+                            }
+                            else
+                            {
+                                SetCellContents(name.ToString(), undefinedContents);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -101,7 +205,7 @@ namespace SS
         /// <param name="name">The name of the cell to change the contents of.</param>
         /// <param name="formula">The Formula object that will become the value of the named cell (if not null).</param>
         /// <returns>Returns a set of the names of the current cell and all its dependees.</returns>
-        public override ISet<string> SetCellContents(string name, Formula formula)
+        protected override ISet<string> SetCellContents(string name, Formula formula)
         {
             //If the Formula object is null, throw an ArgumentNullException:
             if (formula == null)
@@ -156,7 +260,7 @@ namespace SS
         /// <param name="name">The name of the cell to change the contents of.</param>
         /// <param name="formula">The string that will become the value of the named cell (if not null).</param>
         /// <returns>Returns a set of the names of the current cell and all its dependees.</returns>
-        public override ISet<string> SetCellContents(string name, string text)
+        protected override ISet<string> SetCellContents(string name, string text)
         {
             //Has the same logic as SetCellContents(string name, Formula formula), but uses a string instead of a Formula object. See the aforementioned method for details.
 
@@ -191,7 +295,7 @@ namespace SS
         /// <param name="name">The name of the cell to change the contents of.</param>
         /// <param name="formula">The double that will become the value of the named cell (if not null).</param>
         /// <returns>Returns a set of the names of the current cell and all its dependees.</returns>
-        public override ISet<string> SetCellContents(string name, double number)
+        protected override ISet<string> SetCellContents(string name, double number)
         {
             //Has the same logic as SetCellContents(string name, Formula formula), but uses a string instead of a Formula object. See the aforementioned method for details.
             //NOTE: does not check if the double is null, as the double data type is guaranteed to not be null.
@@ -234,6 +338,26 @@ namespace SS
                 return new List<string>();
             }
             return dg.GetDependents(name);
+        }
+
+        public override string GetSavedVersion(string filename)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void Save(string filename)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override object GetCellValue(string name)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override ISet<string> SetContentsOfCell(string name, string content)
+        {
+            throw new NotImplementedException();
         }
 
         /// <summary>
