@@ -22,6 +22,8 @@ namespace SS
         /// </summary>
         private DependencyGraph dg;
 
+        private bool changed;
+
         /// <summary>
         /// 
         /// </summary>
@@ -29,12 +31,12 @@ namespace SS
         {
             get
             {
-                return Changed;
+                return changed;
             }
 
             protected set
             {
-                Changed = value;
+                changed = value;
             }
         }
 
@@ -43,8 +45,6 @@ namespace SS
         /// </summary>
         public Spreadsheet() : base(null, null, "default")
         {
-            //Set Changed to true as the spreadsheet has been initialized.
-            Changed = true;
             //Initialize the dictionary holding cells and the DependencyGraph
             allCells = new Dictionary<string, Cell>();
             dg = new DependencyGraph();
@@ -58,8 +58,6 @@ namespace SS
         /// <param name="version">Version string to use.</param>
         public Spreadsheet(Func<string, bool> isValid, Func<string, string> normalize, string version) : base(isValid, normalize, version)
         {
-            //Set Changed to true as the spreadsheet has been initialized.
-            Changed = true;
             //Initialize the dictionary holding cells and the DependencyGraph
             allCells = new Dictionary<string, Cell>();
             dg = new DependencyGraph();
@@ -84,7 +82,7 @@ namespace SS
         /// <param name="file">Filepath to load the spreadsheet from.</param>
         private void LoadSpreadsheet(string file)
         {
-            List<string> validTags = new List<string>(new string[] { "spreadsheet", "cell", "name", "content" });
+            List<string> validTags = new List<string>(new string[] { "spreadsheet", "cell", "name", "contents" });
             Dictionary<string, string> cellsToAdd = new Dictionary<string, string>();
             //Use the XmlReader class to read the file
             using (XmlReader reader = XmlReader.Create(file))
@@ -129,40 +127,45 @@ namespace SS
                             //If the reader is at an element take note of the element name:
                             case XmlNodeType.Element:
                                 elemName = reader.Name.ToLower();
+                                //If the name isn't a valid tag name according to our scheme, throw a SpreadsheetReadWriteException
                                 if (!validTags.Contains(elemName))
                                 {
                                     throw new SpreadsheetReadWriteException("An invalid tag was present in the XML file! Cannot finish parsing...");
                                 }
                                 break;
+                            //If the reader is at the contents of a an XML tag (i.e. <name>This portion</name>)
                             case XmlNodeType.Text:
+                                //If the XML element is at the name of a cell, store the value
                                 if (elemName.Equals("name"))
                                 {
                                     name = reader.Value.Trim();
-                                    isValue = true;
                                 }
+                                //If the XML element is at the contents tag, store the value
                                 else if (elemName.Equals("contents"))
                                 {
                                     value = reader.Value.Trim();
                                     isValue = true;
                                 }
                                 break;
+                            //If the XML document is at the end element tag (i.e. </cell>) continue
                             case XmlNodeType.EndElement:
                                 break;
                         }
+                        //If the reader is at a <content> element, create a cell
                         if (isValue)
                         {
                             cellsToAdd.Add(name, value);
+                            isValue = false;
                         }
                     }
                     //Initialize DependencyGraph and Dictionary holding cells
                     allCells = new Dictionary<string, Cell>();
                     dg = new DependencyGraph();
+                    //Loop through all to-be added cells and call SetContentsOfCell()
                     foreach (KeyValuePair<string, string> toBeCell in cellsToAdd)
                     {
-                        SetCellContents(toBeCell.Key, toBeCell.Value);
+                        SetContentsOfCell(toBeCell.Key, toBeCell.Value);
                     }
-                    //The spreadsheet has been initialized and therefore has been changed.
-                    Changed = true;
                 }
             }
         }
@@ -173,6 +176,8 @@ namespace SS
         /// <param name="name">The name to be validated.</param>
         private void ValidateName(string name)
         {
+            //If the name is null, first char is an int, or doesn't match the criteria, throw an InvalidNameException()
+
             int parsevar;
             if (name == null)
             {
@@ -253,30 +258,41 @@ namespace SS
             ValidateName(name);
             object previousValue = "";
 
+            //Add dependencies for each variable in the Formula
             foreach (string var in formula.GetVariables())
             {
                 dg.AddDependency(var, name);
             }
+            //If the cell hasn't already been added, create a new cell
             if (!allCells.ContainsKey(name))
             {
                 allCells.Add(name, new Cell(name, formula));
             }
+            //Otherwise, edit the cell
             else
             {
                 previousValue = allCells[name].contents;
                 allCells[name] = new Cell(name, formula);
             }
+            //Try to get the cells to recalculate (essentially checking for CircularExceptions)
             try
             {
-                IEnumerable<string> cellsToRecalc = GetCellsToRecalculate(name);
+                GetCellsToRecalculate(name);
             }
             catch (CircularException e)
             {
-                allCells[name] = new Cell(name, previousValue);
+                //Reset the cell that was to be added/edited and then throw the exception
+                if (previousValue.Equals(""))
+                {
+                    allCells.Remove(name);
+                }
+                else
+                {
+                    allCells[name] = new Cell(name, previousValue);
+                }
                 throw e;
             }
-
-
+            
             //Return a HashSet of the named cell's dependees and the name given.
             HashSet<string> retSet = GetAllDependents(name);
             retSet.Add(name);
@@ -293,13 +309,22 @@ namespace SS
         {
             //Has the same logic as SetCellContents(string name, Formula formula), but uses a string instead of a Formula object. See the aforementioned method for details.
 
+            bool isEmpty = false;
             if (text == null)
             {
                 throw new ArgumentNullException();
             }
+            if (text.Equals(""))
+            {
+                isEmpty = true;
+            }
             ValidateName(name);
             if (!allCells.ContainsKey(name))
             {
+                if (isEmpty)
+                {
+                    return new HashSet<string>();
+                }
                 allCells.Add(name, new Cell(name, text));
             }
             else
@@ -310,6 +335,11 @@ namespace SS
                     {
                         dg.RemoveDependency(var, name);
                     }
+                }
+                if (text.Equals(""))
+                {
+                    allCells.Remove(name);
+                    return new HashSet<string>();
                 }
                 allCells[name] = new Cell(name, text);
             }
@@ -447,7 +477,7 @@ namespace SS
                 //Write </name>
                 xmlWriter.WriteEndElement();
                 //Write <content>
-                xmlWriter.WriteStartElement("content");
+                xmlWriter.WriteStartElement("contents");
                 //If the cell's contents is a formula, write "=" plus the formula
                 if (allCells[name].contents is Formula)
                 {
@@ -471,6 +501,7 @@ namespace SS
             XmlDocument doc = new XmlDocument();
             //Save the written XML to the specified filepath:
             doc.Save(xmlWriter);
+            Changed = false;
         }
 
         /// <summary>
@@ -480,14 +511,17 @@ namespace SS
         /// <returns>Returns the value of the cell or a FormulaError object</returns>
         public override object GetCellValue(string name)
         {
+            //If the name is null or is an empty cell throw an exception
             if (name == null || !allCells.ContainsKey(name))
             {
                 throw new InvalidNameException();
             }
+            //If the contents of the cell is a Formula, evaluate it using the lookup function
             if (allCells[name].contents is Formula)
             {
                 return ((Formula)allCells[name].contents).Evaluate(lookup);
             }
+            //Otherwise, just return the contents of the cell (should be a double or string)
             else
             {
                 return allCells[name].contents;
@@ -502,64 +536,110 @@ namespace SS
         /// <returns>Returns the set of dependees of the named cell</returns>
         public override ISet<string> SetContentsOfCell(string name, string content)
         {
+            //If there is a validator function
             if (IsValid != null)
             {
+                //Attempt to validate name, throw exception if it fails to validate
                 if (!IsValid(name))
                 {
                     throw new InvalidNameException();
                 }
+                //If there is a normalizer, attempt to normalize then validate again, throw an exception if it fails to validate
                 if (Normalize != null)
                 {
                     if (!IsValid(Normalize(name)))
                     {
                         throw new InvalidNameException();
                     }
+                    name = Normalize(name);
                 }
             }
+            else
+            {
+                //If there is a normalizer, normalize the name
+                if(Normalize != null)
+                {
+                    name = Normalize(name);
+                }
+            }
+
+            //Set up a double to attempt to parse to
             double parseVal;
-            if (double.TryParse(content, out parseVal))
+
+            //Set changed to true
+            Changed = true;
+
+            if(content == null)
+            {
+                throw new ArgumentNullException();
+            }
+            else if (content.Equals(""))
+            {
+                return SetCellContents(name, content);
+            }
+            //If the content is a double, use the SetCellContents(string, double) method and return its results
+            else if (double.TryParse(content, out parseVal))
             {
                 return SetCellContents(name, parseVal);
             }
+            //If the content's first character is an '=', then assume it's a Formula and use the SetCellContents(string, Formula) method
             else if (content[0] == '=')
             {
                 return SetCellContents(name, new Formula(content.Substring(1), Normalize, IsValid));
             }
+            //Otherwise use the SetCellContents(string, string) method
             else
             {
                 return SetCellContents(name, content);
             }
         }
+
+        /// <summary>
+        /// Lookup function used to find the values of variables or throw an ArgumentException if the variable is undefined or not calculable
+        /// </summary>
+        /// <param name="var">The variable to lookup</param>
+        /// <returns>Returns the value of the variable or throws an ArgumentException.</returns>
         private double lookup(string var)
         {
+            //If the cell exists in the spreadsheet, continue lookup
             if (allCells.ContainsKey(var))
             {
+                //If the variable results to a formula, attempt to evaluate it:
                 if (allCells[var].contents is Formula)
                 {
                     object result = ((Formula)allCells[var].contents).Evaluate(lookup);
+                    //If the formula is not calculable (i.e. returns a FormulaError), throw an ArgumentException
                     if (result is FormulaError)
                     {
                         throw new ArgumentException("The formula associated with " + var + " is invalid!");
                     }
+                    else
+                    {
+                        return (double) result;
+                    }
                 }
+
+                //If the cell is a string, throw an ArgumentException (shouldn't try to evaluate "test" + 2)
                 else if (allCells[var].contents is string)
                 {
                     throw new ArgumentException("The value of " + var + " is a string, and therefore, not calculable!");
                 }
+                //If the cell with the given variable contains a double return it:
                 else if (allCells[var].contents is double)
                 {
                     return (double)allCells[var].contents;
                 }
+                //If none of the above apply throw an ArgumentException
                 else
                 {
                     throw new ArgumentException("The value of " + var + " is not a string, double, or formula!");
                 }
             }
+            //If the cell is not in the sheet
             else
             {
-                throw new ArgumentException("The variable " + var + " is not a cell in the spreadsheet!");
+                thro-w new ArgumentException("The variable " + var + " is not a cell in the spreadsheet!");
             }
-            return 0;
         }
 
         /// <summary>

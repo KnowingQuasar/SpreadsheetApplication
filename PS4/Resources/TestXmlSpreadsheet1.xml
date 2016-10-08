@@ -14,6 +14,6 @@
   </cell>
   <cell>
     <name>A4</name>
-    <contents>=A2 + A3</contents>
+    <contents>=A3 + A4</contents>
   </cell>
 </spreadsheet>

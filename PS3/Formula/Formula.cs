@@ -302,7 +302,14 @@ namespace SpreadsheetUtilities
                         if (lookup == null)
                             return new FormulaError("Cannot evaluate expression. The expression contains variables, but no Lookup function is defined! Please define a valid lookup function.");
                         //Attempt to lookup the value for the variable and store it for calculation
-                        numberToken = lookup(token);
+                        try
+                        {
+                            numberToken = lookup(token);
+                        }
+                        catch (Exception e)
+                        {
+                            return new FormulaError("Cannot evaluate expression. Lookup failed for variable " + token + ", the given message is: " + e.Message);
+                        }
                     }
 
                     //If there are not operators

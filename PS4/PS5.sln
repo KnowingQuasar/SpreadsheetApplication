@@ -12,6 +12,10 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8F50AF93-20D7-4149-A581-7050A92BE3B1}"
 	ProjectSection(SolutionItems) = preProject
 		TestXmlSpreadsheet1.xml = TestXmlSpreadsheet1.xml
+		TestXmlSpreadsheet2.xml = TestXmlSpreadsheet2.xml
+		TestXmlSpreadsheet3.xml = TestXmlSpreadsheet3.xml
+		TestXmlSpreadsheet4.xml = TestXmlSpreadsheet4.xml
+		TestXmlSpreadsheet5.xml = TestXmlSpreadsheet5.xml
 	EndProjectSection
 EndProject
 Global

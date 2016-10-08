@@ -13,6 +13,40 @@ namespace SpreadsheetTest
     public class SpreadSheetTest
     {
         /// <summary>
+        /// Test validator function to act as delegate
+        /// </summary>
+        /// <param name="name">The name to validate</param>
+        /// <returns></returns>
+        private bool validate(string name)
+        {
+            if(name.Length > 2)
+            {
+                return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Test normalize function to act as delegate
+        /// </summary>
+        /// <param name="name">The name to normalize</param>
+        /// <returns></returns>
+        private string normalize(string name)
+        {
+            return name.ToUpper();
+        }
+
+        /// <summary>
+        /// Test normalize function that should invalidate the name
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        private string badNormalize(string name)
+        {
+            return name += "123456";
+        }
+
+        /// <summary>
         /// Tests the Spreadsheet object's default constructor.
         /// </summary>
         [TestMethod]
@@ -27,13 +61,215 @@ namespace SpreadsheetTest
         }
 
         /// <summary>
-        /// 
+        /// Tests the four argument constructor. NOTE: uses a file on MY system, will not work on yours unless the filepath is edited
         /// </summary>
         [TestMethod]
-        public void LoadXmlTest()
+        public void ConstructorLoadingXmlTest()
         {
-            Spreadsheet sheet = new Spreadsheet(null, null, "default", "C:\\Users\\Ian\\Source\\Repos\\01071551\\PS4\\TestXmlSpreadsheet1.xml");
+            //Constructor loading the spreadsheet at the specified filepath, without a normalizer or validator:
+            Spreadsheet sheet = new Spreadsheet(validate, normalize, "default", "C:\\Users\\Ian\\Source\\Repos\\01071551\\PS4\\TestXmlSpreadsheet1.xml");
+            //Create a Formula to Assert against
+            Formula testFormula = new Formula("A2 + A3");
+
+            //Make assertions to test that the XML file was loaded correctly
+            Assert.AreEqual("test", sheet.GetCellContents("A1"));
+            Assert.AreEqual(1.0, sheet.GetCellContents("A2"));
+            Assert.AreEqual(2.0, sheet.GetCellContents("A3"));
+            Assert.AreEqual(testFormula, sheet.GetCellContents("A4"));
+
+            //Set the contents of a cell with a name that should be normalized to all uppercase lettering (i.e. "a7" -> "A7")
+            sheet.SetContentsOfCell("a7", "3.0");
+            //Verify that the uppercased name exists as a cell
+            Assert.IsTrue((new HashSet<string>(sheet.GetNamesOfAllNonemptyCells())).Contains("A7"));
+        }
+
+        /// <summary>
+        /// Tests the three argument constructor of the Spreadsheet class
+        /// </summary>
+        [TestMethod]
+        public void ConstructorThreeArgTest()
+        {
+            Spreadsheet sheet = new Spreadsheet(validate, normalize, "test version");
+
+            //Assert that the sheet has been initialized correctly
+            Assert.AreEqual("test version", sheet.Version);
+            Assert.AreEqual(validate, sheet.IsValid);
+            Assert.AreEqual(normalize, sheet.Normalize);
+        }
+
+        /// <summary>
+        /// Tests to see if the passed in validator throws the correct exception
+        /// </summary>
+        [TestMethod]
+        [ExpectedException(typeof(InvalidNameException))]
+        public void InvalidNameInCellTest()
+        {
+            //Make a new sheet that uses the isValid and Normalize delegates
+            Spreadsheet sheet = new Spreadsheet(validate, normalize, "default");
+            //Set the contents of the cell to something that would cause the Normalize delegate to return false
+            sheet.SetContentsOfCell("A123", "test");
+        }
+
+        /// <summary>
+        /// Tests to see if a SpreadsheetReadWriteException is thrown when the version of the file does not match the inputted version in the constructor
+        /// </summary>
+        [TestMethod]
+        [ExpectedException(typeof(SpreadsheetReadWriteException))]
+        public void SpreadsheetReadWriteExceptionTest1()
+        {
+            Spreadsheet sheet = new Spreadsheet(validate, normalize, "1.0", "C:\\Users\\Ian\\Source\\Repos\\01071551\\PS4\\TestXmlSpreadsheet2.xml");
+        }
+
+        /// <summary>
+        /// Tests to see if a SpreadsheetReadWriteException is thrown when there are invalid tags present in the XML file
+        /// </summary>
+        [TestMethod]
+        [ExpectedException(typeof(SpreadsheetReadWriteException))]
+        public void SpreadsheetReadWriteExceptionTest2()
+        {
+            Spreadsheet sheet = new Spreadsheet(validate, normalize, "default", "C:\\Users\\Ian\\Source\\Repos\\01071551\\PS4\\TestXmlSpreadsheet2.xml");
+        }
+
+        /// <summary>
+        /// Tests to see if a SpreadsheetReadWriteException is thrown when no version attribute is present
+        /// </summary>
+        [TestMethod]
+        [ExpectedException(typeof(SpreadsheetReadWriteException))]
+        public void SpreadsheetReadWriteExceptionTest3()
+        {
+            Spreadsheet sheet = new Spreadsheet(validate, normalize, "default", "C:\\Users\\Ian\\Source\\Repos\\01071551\\PS4\\TestXmlSpreadsheet3.xml");
+        }
+
+        /// <summary>
+        /// Tests to see if a SpreadsheetReadWriteException is thrown when there are attributes in the spreadsheet tag that aren't "version"
+        /// </summary>
+        [TestMethod]
+        [ExpectedException(typeof(SpreadsheetReadWriteException))]
+        public void SpreadsheetReadWriteExceptionTest4()
+        {
+            Spreadsheet sheet = new Spreadsheet(validate, normalize, "default", "C:\\Users\\Ian\\Source\\Repos\\01071551\\PS4\\TestXmlSpreadsheet4.xml");
+        }
+
+        /// <summary>
+        /// Tests to see if a SpreadsheetReadWriteException is thrown when there are attributes in the spreadsheet tag that aren't "version"
+        /// </summary>
+        [TestMethod]
+        [ExpectedException(typeof(SpreadsheetReadWriteException))]
+        public void SpreadsheetReadWriteExceptionTest5()
+        {
+            Spreadsheet sheet = new Spreadsheet(validate, normalize, "default", "C:\\Users\\Ian\\Source\\Repos\\01071551\\PS4\\TestXmlSpreadsheet5.xml");
+        }
+
+        /// <summary>
+        /// Tests to see if a SpreadsheetReadWriteException prints the correct message
+        /// </summary>
+        [TestMethod]
+        public void SpreadsheetReadWriteExceptionTest()
+        {
+            try
+            {
+                Spreadsheet sheet = new Spreadsheet(validate, normalize, "default", "C:\\Users\\Ian\\Source\\Repos\\01071551\\PS4\\TestXmlSpreadsheet4.xml");
+            }
+            catch(SpreadsheetReadWriteException e)
+            {
+                Assert.AreEqual("The spreadsheet tag has more than just a version attribute!", e.Message);
+            }
+        }
+
+        /// <summary>
+        /// Tests GetSavedVersion() to make sure it has full functionality
+        /// </summary>
+        [TestMethod]
+        public void GetSavedVersionTest()
+        {
+            Spreadsheet sheet = new Spreadsheet(validate, normalize, "1.2");
+
+            //Sets up a cell with the name "A1" and value "test"
+            sheet.SetContentsOfCell("A1", "test");
+            //Save the sheet
             sheet.Save("C:\\Users\\Ian\\Desktop\\Tests\\Testing.xml");
+            //Get the version of teh sheet just saved
+            Assert.AreEqual("1.2", sheet.GetSavedVersion("C:\\Users\\Ian\\Desktop\\Tests\\Testing.xml"));
+        }
+
+        /// <summary>
+        /// Tests the Save method of the Spreadsheet object
+        /// </summary>
+        [TestMethod]
+        public void SaveXmlTest()
+        {
+            //Create a blank sheet
+            Spreadsheet sheet = new Spreadsheet();
+            //Create a Formula to Assert against
+            Formula testFormula = new Formula("A2 + A3");
+
+            //Set a bunch of cells to string, doubles, and Formula
+            sheet.SetContentsOfCell("A1", "test");
+            sheet.SetContentsOfCell("A2", "1.0");
+            sheet.SetContentsOfCell("A3", "2.0");
+            sheet.SetContentsOfCell("A4", "=A2 + A3");
+            //Save the file to the disk
+            sheet.Save("C:\\Users\\Ian\\Desktop\\Tests\\Testing.xml");
+
+            //Load the file just saved to a new Spreadsheet
+            Spreadsheet loadedSheet = new Spreadsheet(null, null, "default", "C:\\Users\\Ian\\Desktop\\Tests\\Testing.xml");
+
+            //Make assertions to test that the XML file was saved and reloaded successfully
+            Assert.AreEqual("test", loadedSheet.GetCellContents("A1"));
+            Assert.AreEqual(1.0, loadedSheet.GetCellContents("A2"));
+            Assert.AreEqual(2.0, loadedSheet.GetCellContents("A3"));
+            Assert.AreEqual(testFormula, loadedSheet.GetCellContents("A4"));
+        }
+
+        /// <summary>
+        /// Tests the GetCellValue method's functionality
+        /// </summary>
+        [TestMethod]
+        public void GetCellValueTest()
+        {
+            Spreadsheet sheet = new Spreadsheet();
+
+            //Set 3 cells to the values 1.0, 2.0, and the formula defining the multiplication of those two
+            sheet.SetContentsOfCell("A1", "1.0");
+            sheet.SetContentsOfCell("A2", "2.0");
+            sheet.SetContentsOfCell("A3", "=A1*A2");
+
+            //Assert that the values of the cells are as expected
+            Assert.AreEqual(2d, sheet.GetCellValue("A3"));
+            Assert.AreEqual(1d, sheet.GetCellValue("A1"));
+            Assert.AreEqual(2d, sheet.GetCellValue("A2"));
+        }
+
+        /// <summary>
+        /// Tests to see if an InvalidNameException is thrown when an invalid cell name is passed into GetCellValue()
+        /// </summary>
+        [TestMethod]
+        [ExpectedException(typeof(InvalidNameException))]
+        public void GetCellValueWithInvalidNameExceptionTest1()
+        {
+            Spreadsheet sheet = new Spreadsheet();
+
+            //Set up a cell
+            sheet.SetContentsOfCell("A1", "1.0");
+
+            //Attempt to evaluate a non-existent cell, should throw exception
+            sheet.GetCellValue("A3");
+        }
+
+        /// <summary>
+        /// Tests to see if an InvalidNameException is thrown when a null value is passed into GetCellValue()
+        /// </summary>
+        [TestMethod]
+        [ExpectedException(typeof(InvalidNameException))]
+        public void GetCellValueWithInvalidNameExceptionTest2()
+        {
+            Spreadsheet sheet = new Spreadsheet();
+
+            //Set up a cell
+            sheet.SetContentsOfCell("A1", "1.0");
+
+            //Attempt to evaluate a non-existent cell, should throw exception
+            sheet.GetCellValue(null);
         }
 
         /// <summary>
@@ -88,7 +324,7 @@ namespace SpreadsheetTest
             //Attempt to get the cell contents using a number then letter combination as a cell name:
             sheet.GetCellContents("2d");
         }
-
+        
         /// <summary>
         /// Tests GetCellContents() when a non-number or letter is passed as a name. Should throw an InvalidNameException.
         /// </summary>
@@ -143,6 +379,134 @@ namespace SpreadsheetTest
             //Assert that the new values have been entered:
             Assert.AreEqual(1, result.Count);
             Assert.AreEqual(testFormula2, sheet.GetCellContents("A1"));
+        }
+
+        /// <summary>
+        /// Tests SetCellContents with a Formula that is changed to have different dependents
+        /// </summary>
+        [TestMethod]
+        public void SetCellContentsWithEditedFormulaDependenciesTest()
+        {
+            Spreadsheet sheet = new Spreadsheet();
+
+            //Set up the cell contents needed for the test
+            sheet.SetContentsOfCell("A1", "1.0");
+            sheet.SetContentsOfCell("A2", "2.0");
+            sheet.SetContentsOfCell("A3", "4.0");
+            sheet.SetContentsOfCell("A4", "=A1*A2");
+            //Assert that the value of A4 is as expected
+            Assert.AreEqual(2d, sheet.GetCellValue("A4"));
+            //Change the value of A4
+            sheet.SetContentsOfCell("A4", "=A2*A3");
+            //Assert that the value of A4 is as expected
+            Assert.AreEqual(8d, sheet.GetCellValue("A4"));
+        }
+
+        /// <summary>
+        /// Tests SetCellContents to verify behavior when a cell that had a Formula is changed to a string
+        /// </summary>
+        [TestMethod]
+        public void SetCellContentsWithStringEditDependenciesTest()
+        {
+            Spreadsheet sheet = new Spreadsheet();
+
+            //Set up test cells
+            sheet.SetContentsOfCell("A1", "1.0");
+            sheet.SetContentsOfCell("A2", "2.0");
+            sheet.SetContentsOfCell("A3", "=A1 + A2");
+            sheet.SetContentsOfCell("A3", "test");
+            //Assert that the cell has been changed correctly (GetCellValue("A3") also verifies that the dependencies have been removed)
+            Assert.AreEqual("test", sheet.GetCellValue("A3"));
+        }
+
+        /// <summary>
+        /// Tests SetContentsOfCell() with a passed in empty string
+        /// </summary>
+        [TestMethod]
+        public void SetCellContentWithEmptyStringTest()
+        {
+            Spreadsheet sheet = new Spreadsheet();
+
+            //Attempt to set the contents of A1 to ""
+            sheet.SetContentsOfCell("A1", "");
+            //Assert that the count of Nonempty cells is equal to 0
+            Assert.IsTrue(new HashSet<string>(sheet.GetNamesOfAllNonemptyCells()).Count == 0);
+            //Set the cell contents of A2 to "test"
+            sheet.SetContentsOfCell("A2", "test");
+            //Assert that the count of Nonempty cells is equal to 1
+            Assert.IsTrue(new HashSet<string>(sheet.GetNamesOfAllNonemptyCells()).Count == 1);
+            //Set the cell contents of A2 to ""
+            sheet.SetContentsOfCell("A2", "");
+            //Assert that the count of Nonempty cells is equal to 0
+            Assert.IsTrue(new HashSet<string>(sheet.GetNamesOfAllNonemptyCells()).Count == 0);
+        }
+
+        /// <summary>
+        /// Tests SetCellContents to verify behavior when a cell that had a Formula is changed to a string
+        /// </summary>
+        [TestMethod]
+        public void SetCellContentsWithDoubleEditDependenciesTest()
+        {
+            Spreadsheet sheet = new Spreadsheet();
+
+            //Set up test cells
+            sheet.SetContentsOfCell("A1", "1.0");
+            sheet.SetContentsOfCell("A2", "2.0");
+            sheet.SetContentsOfCell("A3", "=A1 + A2");
+            sheet.SetContentsOfCell("A3", "4.0");
+            //Assert that the cell has been changed correctly (GetCellValue("A3") also verifies that the dependencies have been removed)
+            Assert.AreEqual(4d, sheet.GetCellValue("A3"));
+            Assert.IsTrue(new HashSet<string>(sheet.GetNamesOfAllNonemptyCells()).Count == 3);
+        }
+
+        /// <summary>
+        /// Tests SetContentsOfCell() using a normalizer function, but no validator
+        /// </summary>
+        [TestMethod]
+        public void SetCellContentsUsingNoValidator()
+        {
+            Spreadsheet sheet = new Spreadsheet(null, normalize, "1.0");
+            sheet.SetContentsOfCell("a1", "test");
+            Assert.IsTrue((new HashSet<string>(sheet.GetNamesOfAllNonemptyCells())).Contains("A1"));
+        }
+
+
+        [TestMethod()]
+        [ExpectedException(typeof(CircularException))]
+        public void CircularExceptionTest()
+        {
+            Spreadsheet s = new Spreadsheet();
+            try
+            {
+                s.SetContentsOfCell("A1", "=A2+A3");
+                s.SetContentsOfCell("A2", "15");
+                s.SetContentsOfCell("A3", "30");
+                s.SetContentsOfCell("A2", "=A3*A1");
+            }
+            catch (CircularException e)
+            {
+                Assert.AreEqual(15, (double)s.GetCellContents("A2"), 1e-9);
+                throw e;
+            }
+        }
+
+        /// <summary>
+        /// Attempts to set a cell to a name that causes the normalizer to invalidate the name according to the validator's rules
+        /// </summary>
+        [TestMethod]
+        [ExpectedException(typeof(InvalidNameException))]
+        public void SetCellContentsWithNormalizeInvalidatesNameTest()
+        {
+            Spreadsheet sheet = new Spreadsheet(validate, badNormalize, "1.0");
+            sheet.SetContentsOfCell("A1", "test");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public void SetCellContentsWithNullFormulaTest()
+        {
+            Spreadsheet sheet = new Spreadsheet();
+            sheet.SetContentsOfCell("A1", null);
         }
 
         /// <summary>
@@ -330,6 +694,62 @@ namespace SpreadsheetTest
             privateSheetAccessor.Invoke("SetCellContents", "A2", formulaWithDependencies1);
             //Attempt to set the cell contents of A1:
             privateSheetAccessor.Invoke("SetCellContents", "A1", formulaWithDependencies2);
+        }
+
+        /// <summary>
+        /// Tests SetContentsOfCell with a long chain of connected cells
+        /// </summary>
+        [TestMethod]
+        public void SetContentsOfCellStressTest()
+        {
+            Spreadsheet sheet = new Spreadsheet();
+
+            //Set up the cells for testing
+            sheet.SetContentsOfCell("A1", "3.0");
+            sheet.SetContentsOfCell("A2", "4.0");
+            sheet.SetContentsOfCell("A3", "18");
+            sheet.SetContentsOfCell("A4", "=A1+A2");
+            sheet.SetContentsOfCell("A5", "=A1+A3");
+            sheet.SetContentsOfCell("A6", "=A2+A3");
+            sheet.SetContentsOfCell("A7", "=A4+A5");
+            sheet.SetContentsOfCell("A8", "=A6+A7");
+
+            //Assert that all values are as expected
+            Assert.AreEqual(7d, sheet.GetCellValue("A4"));
+            Assert.AreEqual(21d, sheet.GetCellValue("A5"));
+            Assert.AreEqual(22d, sheet.GetCellValue("A6"));
+            Assert.AreEqual(28d, sheet.GetCellValue("A7"));
+            Assert.AreEqual(50d, sheet.GetCellValue("A8"));
+        }
+
+        /// <summary>
+        /// Tets SetContentsOfCell with an invalid Formula
+        /// </summary>
+        [TestMethod]
+        public void SetContentsOfCellInvalidFormulaTest()
+        {
+            Spreadsheet sheet = new Spreadsheet();
+
+            //Set up the cells for testing
+            sheet.SetContentsOfCell("A1", "test");
+            sheet.SetContentsOfCell("A2", "2.0");
+            sheet.SetContentsOfCell("A3", "=A1+A2");
+
+            Assert.IsTrue(sheet.GetCellValue("A3") is FormulaError);
+        }
+
+
+        [TestMethod]
+        public void ChangedTest()
+        {
+            Spreadsheet sheet = new Spreadsheet();
+
+            //Set up a spreadsheet
+            sheet.SetContentsOfCell("A1", "test");
+            sheet.SetContentsOfCell("A2", "2.0");
+            Assert.IsTrue(sheet.Changed);
+            sheet.Save("C:\\Users\\Ian\\Desktop\\Tests\\Testing.xml");
+            Assert.IsFalse(sheet.Changed);
         }
 
         /// <summary>
