@@ -79,7 +79,7 @@ namespace SS
     /// the Formula "x3+a5" should be converted to "X3+A5" before use.
     /// 
     /// A spreadsheet contains a cell corresponding to every possible cell name.  
-    /// In addition to a name, each cell has a contents and a value.  The distinction is
+    /// In addition to a name, each cell has a contents and a contents.  The distinction is
     /// important.
     /// 
     /// The contents of a cell can be (1) a string, (2) a double, or (3) a Formula.  If the
@@ -88,18 +88,18 @@ namespace SS
     /// 
     /// In a new spreadsheet, the contents of every cell is the empty string.
     ///  
-    /// The value of a cell can be (1) a string, (2) a double, or (3) a FormulaError.  
-    /// (By analogy, the value of an Excel cell is what is displayed in that cell's position
+    /// The contents of a cell can be (1) a string, (2) a double, or (3) a FormulaError.  
+    /// (By analogy, the contents of an Excel cell is what is displayed in that cell's position
     /// in the grid.)
     /// 
-    /// If a cell's contents is a string, its value is that string.
+    /// If a cell's contents is a string, its contents is that string.
     /// 
-    /// If a cell's contents is a double, its value is that double.
+    /// If a cell's contents is a double, its contents is that double.
     /// 
-    /// If a cell's contents is a Formula, its value is either a double or a FormulaError,
-    /// as reported by the Evaluate method of the Formula class.  The value of a Formula,
-    /// of course, can depend on the values of variables.  The value of a variable is the 
-    /// value of the spreadsheet cell it names (if that cell's value is a double) or 
+    /// If a cell's contents is a Formula, its contents is either a double or a FormulaError,
+    /// as reported by the Evaluate method of the Formula class.  The contents of a Formula,
+    /// of course, can depend on the values of variables.  The contents of a variable is the 
+    /// contents of the spreadsheet cell it names (if that cell's contents is a double) or 
     /// is undefined (otherwise).
     /// 
     /// Spreadsheets are never allowed to contain a combination of Formulas that establish
@@ -193,8 +193,8 @@ namespace SS
         /// <summary>
         /// If name is null or invalid, throws an InvalidNameException.
         /// 
-        /// Otherwise, returns the value (as opposed to the contents) of the named cell.  The return
-        /// value should be either a string, a double, or a SpreadsheetUtilities.FormulaError.
+        /// Otherwise, returns the contents (as opposed to the contents) of the named cell.  The return
+        /// contents should be either a string, a double, or a SpreadsheetUtilities.FormulaError.
         /// </summary>
         public abstract object GetCellValue(String name);
 
@@ -206,8 +206,8 @@ namespace SS
         /// <summary>
         /// If name is null or invalid, throws an InvalidNameException.
         /// 
-        /// Otherwise, returns the contents (as opposed to the value) of the named cell.  The return
-        /// value should be either a string, a double, or a Formula.
+        /// Otherwise, returns the contents (as opposed to the contents) of the named cell.  The return
+        /// contents should be either a string, a double, or a Formula.
         /// </summary>
         public abstract object GetCellContents(String name);
 
@@ -235,7 +235,7 @@ namespace SS
         /// Otherwise, the contents of the named cell becomes content.
         /// 
         /// If an exception is not thrown, the method returns a set consisting of
-        /// name plus the names of all other cells whose value depends, directly
+        /// name plus the names of all other cells whose contents depends, directly
         /// or indirectly, on the named cell.
         /// 
         /// For example, if name is A1, B1 contains A1*2, and C1 contains B1+A1, the
@@ -248,7 +248,7 @@ namespace SS
         /// If name is null or invalid, throws an InvalidNameException.
         /// 
         /// Otherwise, the contents of the named cell becomes number.  The method returns a
-        /// set consisting of name plus the names of all other cells whose value depends, 
+        /// set consisting of name plus the names of all other cells whose contents depends, 
         /// directly or indirectly, on the named cell.
         /// 
         /// For example, if name is A1, B1 contains A1*2, and C1 contains B1+A1, the
@@ -263,7 +263,7 @@ namespace SS
         /// Otherwise, if name is null or invalid, throws an InvalidNameException.
         /// 
         /// Otherwise, the contents of the named cell becomes text.  The method returns a
-        /// set consisting of name plus the names of all other cells whose value depends, 
+        /// set consisting of name plus the names of all other cells whose contents depends, 
         /// directly or indirectly, on the named cell.
         /// 
         /// For example, if name is A1, B1 contains A1*2, and C1 contains B1+A1, the
@@ -281,7 +281,7 @@ namespace SS
         /// circular dependency, throws a CircularException.
         /// 
         /// Otherwise, the contents of the named cell becomes formula.  The method returns a
-        /// Set consisting of name plus the names of all other cells whose value depends,
+        /// Set consisting of name plus the names of all other cells whose contents depends,
         /// directly or indirectly, on the named cell.
         /// 
         /// For example, if name is A1, B1 contains A1*2, and C1 contains B1+A1, the
@@ -296,7 +296,7 @@ namespace SS
         /// Otherwise, if name isn't a valid cell name, throws an InvalidNameException.
         /// 
         /// Otherwise, returns an enumeration, without duplicates, of the names of all cells whose
-        /// values depend directly on the value of the named cell.  In other words, returns
+        /// values depend directly on the contents of the named cell.  In other words, returns
         /// an enumeration, without duplicates, of the names of all cells that contain
         /// formulas containing name.
         /// 

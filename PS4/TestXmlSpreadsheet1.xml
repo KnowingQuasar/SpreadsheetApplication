@@ -1,7 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <spreadsheet version="default">
   <cell>
-    <name>"A1"</name>
-    <contents>"test" </contents>
+    <name>A1</name>
+    <contents>test</contents>
+  </cell>
+  <cell>
+    <name>A2</name>
+    <contents>test2</contents>
   </cell>
 </spreadsheet>

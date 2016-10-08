@@ -96,10 +96,11 @@ namespace SpreadsheetTest
         public void LoadXmlTest()
         {
             Spreadsheet sheet = new Spreadsheet(null, null, "default", "C:\\Users\\Ian\\Source\\Repos\\01071551\\PS4\\TestXmlSpreadsheet1.xml");
+            sheet.Save("C:\\Users\\Ian\\Desktop\\Tests\\Testing.xml");
         }
 
         /// <summary>
-        /// Tests SetCellContents() when a Formula object is passed into the function. Also, inadvertently tests the GetCellContents() method, when the name, value pair are present.
+        /// Tests SetCellContents() when a Formula object is passed into the function. Also, inadvertently tests the GetCellContents() method, when the name, contents pair are present.
         /// </summary>
         [TestMethod]
         public void SetCellContentsWithFormulaTest()
