@@ -69,7 +69,7 @@ namespace SS
                 allCells.TryGetValue(name, out retCell);
                 return retCell.value;
             }
-                
+
         }
 
         /// <summary>
@@ -81,10 +81,10 @@ namespace SS
             //Create a container cell
             Cell checkCell;
             //Look through all names in allCells:
-            foreach(string name in allCells.Keys)
+            foreach (string name in allCells.Keys)
             {
                 //If the cell has a value:
-                if(allCells.TryGetValue(name, out checkCell))
+                if (allCells.TryGetValue(name, out checkCell))
                 {
                     //If the value is not an empty string, add it to the return value:
                     if (!checkCell.value.Equals(""))
@@ -110,43 +110,35 @@ namespace SS
             }
             //Assure that the given name is valid
             ValidateName(name);
-            //Create container cell
-            Cell editCell;
+            object previousValue = "";
+
             foreach (string var in formula.GetVariables())
             {
                 dg.AddDependency(var, name);
             }
-            //If the allCells Dictionary is empty or doesn't contain the named key, create a new cell and add it to the Dictionary.
-            if (allCells.Count == 0 || !allCells.ContainsKey(name))
+            if (!allCells.ContainsKey(name))
             {
-                editCell = new Cell(name, formula);
-                allCells.Add(name, editCell);
-                LinkedList<string> cellsToRecalc = (LinkedList<string>)GetCellsToRecalculate(name);
-
-                //Here I would send these cell names to a function that would recalculate the necessary cells.
-                //However, for this implementation, it seems as if this function is not necessary as we are only setting up
-                //the spreadsheet's structure and basic form. See the note in the README for more details
-
+                allCells.Add(name, new Cell(name, formula));
             }
-            //Otherwise, edit the current value of the named cell:
             else
             {
-                allCells.TryGetValue(name, out editCell);
-                editCell.value = formula;
-                LinkedList<string> cellsToRecalc = (LinkedList<string>)GetCellsToRecalculate(name);
-
-                //Here I would send these cell names to a function that would recalculate the necessary cells.
-                //However, for this implementation, it seems as if this function is not necessary as we are only setting up
-                //the spreadsheet's structure and basic form. See the note in the README for more details
-
+                previousValue = allCells[name].value;
+                allCells[name] = new Cell(name, formula);
             }
-            //Return a HashSet of the named cell's dependees and the name given.
-            HashSet<string> retSet = new HashSet<string>();
-            retSet.Add(name);
-            foreach (string dependee in GetDirectDependents(name))
+            try
             {
-                retSet.Add(dependee);
+                IEnumerable<string> cellsToRecalc = GetCellsToRecalculate(name);
             }
+            catch (CircularException e)
+            {
+                allCells[name] = new Cell(name, previousValue);
+                throw e;
+            }
+
+
+            //Return a HashSet of the named cell's dependees and the name given.
+            HashSet<string> retSet = GetAllDependents(name);
+            retSet.Add(name);
             return retSet;
         }
 
@@ -165,23 +157,23 @@ namespace SS
                 throw new ArgumentNullException();
             }
             ValidateName(name);
-            Cell editCell;
-            if (allCells.Count == 0 || !allCells.ContainsKey(name))
+            if (!allCells.ContainsKey(name))
             {
-                editCell = new Cell(name, text);
-                allCells.Add(name, editCell);
+                allCells.Add(name, new Cell(name, text));
             }
             else
             {
-                allCells.TryGetValue(name, out editCell);
-                editCell.value = text;
+                if(allCells[name].value is Formula)
+                {
+                    foreach(string var in ((Formula)allCells[name].value).GetVariables())
+                    {
+                        dg.RemoveDependency(var, name);
+                    }
+                }
+                allCells[name] = new Cell(name, text);
             }
-            HashSet<string> retSet = new HashSet<string>();
+            HashSet<string> retSet = GetAllDependents(name);
             retSet.Add(name);
-            foreach (string dependee in GetDirectDependents(name))
-            {
-                retSet.Add(dependee);
-            }
             return retSet;
         }
 
@@ -197,23 +189,23 @@ namespace SS
             //NOTE: does not check if the double is null, as the double data type is guaranteed to not be null.
 
             ValidateName(name);
-            Cell editCell;
-            if (allCells.Count == 0 || !allCells.ContainsKey(name))
+            if (!allCells.ContainsKey(name))
             {
-                editCell = new Cell(name, number);
-                allCells.Add(name, editCell);
+                allCells.Add(name, new Cell(name, number));
             }
             else
             {
-                allCells.TryGetValue(name, out editCell);
-                editCell.value = number;
+                if (allCells[name].value is Formula)
+                {
+                    foreach (string var in ((Formula)allCells[name].value).GetVariables())
+                    {
+                        dg.RemoveDependency(var, name);
+                    }
+                }
+                allCells[name] = new Cell(name, number);
             }
-            HashSet<string> retSet = new HashSet<string>();
+            HashSet<string> retSet = GetAllDependents(name);
             retSet.Add(name);
-            foreach (string dependee in GetDirectDependents(name))
-            {
-                retSet.Add(dependee);
-            }
             return retSet;
         }
 
@@ -234,6 +226,17 @@ namespace SS
                 return new List<string>();
             }
             return dg.GetDependents(name);
+        }
+
+        private HashSet<string> GetAllDependents(string name)
+        {
+            HashSet<string> retSet = new HashSet<string>(GetDirectDependents(name));
+            HashSet<string> temp = new HashSet<string>(retSet);
+            foreach(string dependent in temp)
+            {
+                retSet.UnionWith(GetAllDependents(dependent));
+            }
+            return retSet;
         }
 
         /// <summary>
