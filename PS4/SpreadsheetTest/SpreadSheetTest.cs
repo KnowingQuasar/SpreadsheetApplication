@@ -27,6 +27,16 @@ namespace SpreadsheetTest
         }
 
         /// <summary>
+        /// 
+        /// </summary>
+        [TestMethod]
+        public void LoadXmlTest()
+        {
+            Spreadsheet sheet = new Spreadsheet(null, null, "default", "C:\\Users\\Ian\\Source\\Repos\\01071551\\PS4\\TestXmlSpreadsheet1.xml");
+            sheet.Save("C:\\Users\\Ian\\Desktop\\Tests\\Testing.xml");
+        }
+
+        /// <summary>
         /// Tests GetCellContents() when there are no defined cells.
         /// </summary>
         [TestMethod]
@@ -91,14 +101,6 @@ namespace SpreadsheetTest
             sheet.GetCellContents("&");
         }
 
-
-        [TestMethod]
-        public void LoadXmlTest()
-        {
-            Spreadsheet sheet = new Spreadsheet(null, null, "default", "C:\\Users\\Ian\\Source\\Repos\\01071551\\PS4\\TestXmlSpreadsheet1.xml");
-            sheet.Save("C:\\Users\\Ian\\Desktop\\Tests\\Testing.xml");
-        }
-
         /// <summary>
         /// Tests SetCellContents() when a Formula object is passed into the function. Also, inadvertently tests the GetCellContents() method, when the name, contents pair are present.
         /// </summary>
@@ -130,7 +132,7 @@ namespace SpreadsheetTest
             //Create another test formula for testing edits:
             Formula testFormula2 = new Formula("3 + 4");
             //Attempt to set the cell contents:
-            ISet<string> result = (ISet<string>) privateSheetAccessor.Invoke("SetCellContents", "A1", testFormula);
+            ISet<string> result = (ISet<string>)privateSheetAccessor.Invoke("SetCellContents", "A1", testFormula);
             //Assert that there are no dependants:
             Assert.AreEqual(1, result.Count);
             //Assert that the given cell contents are correct
@@ -174,7 +176,7 @@ namespace SpreadsheetTest
             //Create another test string for testing edits:
             string string2 = "string2";
             //Attempt to set the cell contents:
-            ISet<string> result = (ISet<string>) privateSheetAccessor.Invoke("SetCellContents", "A1", string1);
+            ISet<string> result = (ISet<string>)privateSheetAccessor.Invoke("SetCellContents", "A1", string1);
             //Assert that there are no dependants:
             Assert.AreEqual(1, result.Count);
             //Assert that the given cell contents are correct

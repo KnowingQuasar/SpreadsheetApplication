@@ -21,7 +21,7 @@ namespace SS
         /// Dependency graph for the Spreadsheet. See the DependencyGraph documentation for details.
         /// </summary>
         private DependencyGraph dg;
-        
+
         /// <summary>
         /// 
         /// </summary>
@@ -157,7 +157,7 @@ namespace SS
                     //Initialize DependencyGraph and Dictionary holding cells
                     allCells = new Dictionary<string, Cell>();
                     dg = new DependencyGraph();
-                    foreach(KeyValuePair<string, string> toBeCell in cellsToAdd)
+                    foreach (KeyValuePair<string, string> toBeCell in cellsToAdd)
                     {
                         SetCellContents(toBeCell.Key, toBeCell.Value);
                     }
@@ -210,7 +210,7 @@ namespace SS
                 allCells.TryGetValue(name, out retCell);
                 return retCell.contents;
             }
-                
+
         }
 
         /// <summary>
@@ -222,10 +222,10 @@ namespace SS
             //Create a container cell
             Cell checkCell;
             //Look through all names in allCells:
-            foreach(string name in allCells.Keys)
+            foreach (string name in allCells.Keys)
             {
                 //If the cell has a contents:
-                if(allCells.TryGetValue(name, out checkCell))
+                if (allCells.TryGetValue(name, out checkCell))
                 {
                     //If the contents is not an empty string, add it to the return contents:
                     if (!checkCell.contents.Equals(""))
@@ -436,7 +436,7 @@ namespace SS
             xmlWriter.WriteAttributeString("version", Version);
 
             //Write each cell that is empty:
-            foreach(string name in GetNamesOfAllNonemptyCells())
+            foreach (string name in GetNamesOfAllNonemptyCells())
             {
                 //Write <cell>
                 xmlWriter.WriteStartElement("cell");
@@ -474,13 +474,24 @@ namespace SS
         }
 
         /// <summary>
-        /// Gets the contents, not contents, of the given cell
+        /// Gets the value, not contents, of the given cell
         /// </summary>
         /// <param name="name"></param>
-        /// <returns>Returns the contents of the cell</returns>
+        /// <returns>Returns the value of the cell or a FormulaError object</returns>
         public override object GetCellValue(string name)
         {
-            throw new NotImplementedException();
+            if (name == null || !allCells.ContainsKey(name))
+            {
+                throw new InvalidNameException();
+            }
+            if (allCells[name].contents is Formula)
+            {
+                return ((Formula)allCells[name].contents).Evaluate(lookup);
+            }
+            else
+            {
+                return allCells[name].contents;
+            }
         }
 
         /// <summary>
@@ -491,13 +502,13 @@ namespace SS
         /// <returns>Returns the set of dependees of the named cell</returns>
         public override ISet<string> SetContentsOfCell(string name, string content)
         {
-            if(IsValid != null)
+            if (IsValid != null)
             {
                 if (!IsValid(name))
                 {
                     throw new InvalidNameException();
                 }
-                if(Normalize != null)
+                if (Normalize != null)
                 {
                     if (!IsValid(Normalize(name)))
                     {
@@ -506,13 +517,13 @@ namespace SS
                 }
             }
             double parseVal;
-            if(double.TryParse(content, out parseVal))
+            if (double.TryParse(content, out parseVal))
             {
                 return SetCellContents(name, parseVal);
             }
-            else if(content[0] == '=')
+            else if (content[0] == '=')
             {
-               return SetCellContents(name, new Formula(content.Substring(1), Normalize, IsValid));
+                return SetCellContents(name, new Formula(content.Substring(1), Normalize, IsValid));
             }
             else
             {
@@ -521,7 +532,34 @@ namespace SS
         }
         private double lookup(string var)
         {
-            return 2.0;
+            if (allCells.ContainsKey(var))
+            {
+                if (allCells[var].contents is Formula)
+                {
+                    object result = ((Formula)allCells[var].contents).Evaluate(lookup);
+                    if (result is FormulaError)
+                    {
+                        throw new ArgumentException("The formula associated with " + var + " is invalid!");
+                    }
+                }
+                else if (allCells[var].contents is string)
+                {
+                    throw new ArgumentException("The value of " + var + " is a string, and therefore, not calculable!");
+                }
+                else if (allCells[var].contents is double)
+                {
+                    return (double)allCells[var].contents;
+                }
+                else
+                {
+                    throw new ArgumentException("The value of " + var + " is not a string, double, or formula!");
+                }
+            }
+            else
+            {
+                throw new ArgumentException("The variable " + var + " is not a cell in the spreadsheet!");
+            }
+            return 0;
         }
 
         /// <summary>
@@ -538,11 +576,6 @@ namespace SS
             /// The name of the cell.
             /// </summary>
             public string name;
-
-            /// <summary>
-            /// The value of the cell.
-            /// </summary>
-            public string value;
 
             /// <summary>
             /// Common constructor that takes a string and an object. Sets the name to the string parameter and contents to the object parameter.
