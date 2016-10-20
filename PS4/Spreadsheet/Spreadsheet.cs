@@ -638,7 +638,7 @@ namespace SS
             //If the cell is not in the sheet
             else
             {
-                thro-w new ArgumentException("The variable " + var + " is not a cell in the spreadsheet!");
+                throw new ArgumentException("The variable " + var + " is not a cell in the spreadsheet!");
             }
         }
 
